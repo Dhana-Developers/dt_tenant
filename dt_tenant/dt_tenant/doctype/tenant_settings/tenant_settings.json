@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-18 13:55:45.789359",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "master_url",
+  "api_key",
+  "api_secret",
+  "enable_capability_sync",
+  "last_capability_sync"
+ ],
+ "fields": [
+  {
+   "fieldname": "master_url",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Master URL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "api_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Master API Key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "api_secret",
+   "fieldtype": "Data",
+   "label": "Master API Secret"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_capability_sync",
+   "fieldtype": "Check",
+   "label": "Enable Capability Sync"
+  },
+  {
+   "fieldname": "last_capability_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Sync At"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-12-18 17:31:50.058854",
+ "modified_by": "Administrator",
+ "module": "Dt Tenant",
+ "name": "Tenant Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -132,18 +132,21 @@ app_license = "agpl-3.0"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
+doc_events = {
 # 	"*": {
 # 		"on_update": "method",
 # 		"on_cancel": "method",
 # 		"on_trash": "method"
-# 	}
-# }
+# 	},
+    "User": {
+        "after_insert": "dt_tenant.controllers.user_roles.assign_roles"
+    }
+}
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
+scheduler_events = {
 # 	"all": [
 # 		"dt_tenant.tasks.all"
 # 	],
@@ -159,7 +162,12 @@ app_license = "agpl-3.0"
 # 	"monthly": [
 # 		"dt_tenant.tasks.monthly"
 # 	],
-# }
+    "cron": {
+        "0 */6 * * *": [
+            "dt_tenant.controllers.capability_scheduler.run_scheduled_sync"
+        ]
+    }
+}
 
 # Testing
 # -------
