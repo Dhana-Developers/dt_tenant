@@ -1,0 +1,45 @@
+[
+  {
+    "doctype": "Custom Field",
+    "name": "custom_tenant_roles_and_permission",
+    "dt": "User",
+    "fieldname": "custom_tenant_roles_and_permission",
+    "fieldtype": "Tab Break",
+    "label": "Tenant Roles & Permissions",
+    "insert_after": "home_settings",
+    "module": "Dt Tenant"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "custom_tenant_role_profiles",
+    "dt": "User",
+    "fieldname": "custom_tenant_role_profiles",
+    "fieldtype": "Link",
+    "label": "Tenant Profile",
+    "options": "Tenant Role Profile",
+    "insert_after": "custom_tenant_roles_and_permission",
+    "module": "Dt Tenant"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "custom_tenant_roles",
+    "dt": "User",
+    "fieldname": "custom_tenant_roles",
+    "fieldtype": "Table",
+    "label": "Tenant Roles",
+    "options": "Tenant User Role",
+    "insert_after": "custom_tenant_role_profiles",
+    "module": "Dt Tenant"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "custom_tenant_allowed_modules",
+    "dt": "User",
+    "fieldname": "custom_tenant_allowed_modules",
+    "fieldtype": "Table",
+    "label": "Tenant Allowed Modules",
+    "options": "Tenant Allowed Module",
+    "insert_after": "custom_tenant_roles",
+    "module": "Dt Tenant"
+  }
+]

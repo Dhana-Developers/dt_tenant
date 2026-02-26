@@ -40,6 +40,176 @@ def apply_capabilities_to_user(user_name, allowed_roles, allowed_modules):
 
     user.save(ignore_permissions=True)
 
+# def apply_capabilities_to_user(user_name):
+#     user = frappe.get_doc("User", user_name)
+
+#     allowed_roles = set(
+#         frappe.get_all("Tenant Roles",
+#                        filters={"enabled": 1},
+#                        pluck="role")
+#     ) | ALWAYS_KEEP_ROLES
+
+# 🏗 Proper Implementation
+
+### Step 1 — Sync Tenant Role Cache
+
+# def sync_tenant_roles(allowed_roles, source_profile=None):
+#     existing = frappe.get_all("Tenant Roles", pluck="role")
+
+#     allowed_set = set(allowed_roles)
+
+#     # Disable roles not allowed anymore
+#     for role in existing:
+#         if role not in allowed_set:
+#             doc = frappe.get_doc("Tenant Roles", role)
+#             doc.enabled = 0
+#             doc.save(ignore_permissions=True)
+
+#     # Insert or enable allowed roles
+#     for role in allowed_set:
+#         if frappe.db.exists("Tenant Roles", role):
+#             doc = frappe.get_doc("Tenant Roles", role)
+#             doc.enabled = 1
+#             doc.source_profile = source_profile
+#             doc.save(ignore_permissions=True)
+#         else:
+#             frappe.get_doc({
+#                 "doctype": "Tenant Roles",
+#                 "role": role,
+#                 "enabled": 1,
+#                 "source_profile": source_profile
+#             }).insert(ignore_permissions=True)
+
+def sync_tenant_roles(allowed_roles, source_profile=None):
+    allowed_set = set(allowed_roles)
+
+    existing_docs = frappe.get_all(
+        "Tenant Roles",
+        fields=["name", "role"]
+    )
+
+    role_map = {d.role: d.name for d in existing_docs}
+    existing_roles = set(role_map.keys())
+
+    roles_to_delete = existing_roles - allowed_set
+
+    for role in roles_to_delete:
+        tenant_role_name = role_map[role]
+
+        # 🔥 1️⃣ Remove User child references
+        frappe.db.delete(
+            "Tenant User Role",
+            {"role": tenant_role_name}
+        )
+
+        # 🔥 2️⃣ Remove Role Profile references
+        frappe.db.delete(
+            "Tenant User Role Profile",
+            {"role": tenant_role_name}
+        )
+
+        # 🔥 3️⃣ Delete overlay role
+        frappe.delete_doc(
+            "Tenant Roles",
+            tenant_role_name,
+            ignore_permissions=True
+        )
+
+    # Insert new roles
+    for role in allowed_set - existing_roles:
+        frappe.get_doc({
+            "doctype": "Tenant Roles",
+            "role": role,
+            "enabled": 1,
+            "source_profile": source_profile
+        }).insert(ignore_permissions=True)
+
+    # Update existing roles
+    for role in allowed_set & existing_roles:
+        doc = frappe.get_doc("Tenant Roles", role_map[role])
+        doc.enabled = 1
+        doc.source_profile = source_profile
+        doc.save(ignore_permissions=True)
+
+# def sync_tenant_modules(allowed_modules, source_profile=None):
+#     existing = frappe.get_all("Tenant Modules", pluck="module")
+
+#     allowed_set = set(allowed_modules)
+
+#     # Disable modules not allowed anymore
+#     for module in existing:
+#         if module not in allowed_set:
+#             doc = frappe.get_doc("Tenant Modules", module)
+#             doc.enabled = 0
+#             doc.save(ignore_permissions=True)
+
+#     # Insert or enable allowed modules
+#     for module in allowed_set:
+#         if frappe.db.exists("Tenant Modules", module):
+#             doc = frappe.get_doc("Tenant Modules", module)
+#             doc.enabled = 1
+#             doc.source_profile = source_profile
+#             doc.save(ignore_permissions=True)
+#         else:
+#             frappe.get_doc({
+#                 "doctype": "Tenant Modules",
+#                 "module": module,
+#                 "enabled": 1,
+#                 "source_profile": source_profile
+#             }).insert(ignore_permissions=True)
+
+def sync_tenant_modules(allowed_modules, source_profile=None):
+    allowed_set = set(allowed_modules)
+
+    existing_modules = set(
+        frappe.get_all("Tenant Modules", pluck="name")
+    )
+
+    modules_to_delete = existing_modules - allowed_set
+
+    # -----------------------------------
+    # 1️⃣ HARD DELETE REMOVED MODULES
+    # -----------------------------------
+    for module in modules_to_delete:
+        # 🔥 Remove from User child table
+        frappe.db.delete(
+            "Tenant Allowed Module",
+            {"module": module}
+        )
+
+        # 🔥 Remove from Role Profile child table
+        frappe.db.delete(
+            "Tenant User Role Profile",
+            {"module": module}
+        )
+
+        # 🔥 Delete overlay module itself
+        frappe.delete_doc(
+            "Tenant Modules",
+            module,
+            ignore_permissions=True
+        )
+
+    # -----------------------------------
+    # 2️⃣ INSERT NEW MODULES
+    # -----------------------------------
+    for module in allowed_set - existing_modules:
+        frappe.get_doc({
+            "doctype": "Tenant Modules",
+            "module": module,
+            "enabled": 1,
+            "source_profile": source_profile
+        }).insert(ignore_permissions=True)
+
+    # -----------------------------------
+    # 3️⃣ UPDATE SOURCE PROFILE FOR EXISTING
+    # -----------------------------------
+    for module in allowed_set & existing_modules:
+        doc = frappe.get_doc("Tenant Modules", module)
+        doc.enabled = 1
+        doc.source_profile = source_profile
+        doc.save(ignore_permissions=True)
+
 @frappe.whitelist()
 def resync_capabilities():
     try:
@@ -71,6 +241,10 @@ def resync_capabilities():
     # -------------------------------
     allowed_roles = caps.get("allowed_roles", [])
     allowed_modules = caps.get("allowed_modules", [])
+
+    #🔹 PHASE 2 — CACHE SNAPSHOT
+    sync_tenant_roles(allowed_roles, source_profile=caps.get("capability_profile"))
+    sync_tenant_modules(allowed_modules, source_profile=caps.get("capability_profile"))
 
     if not allowed_roles:
         log_capability_sync(

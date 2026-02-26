@@ -1,0 +1,112 @@
+{
+ "app": "dt_tenant",
+ "creation": "2026-02-20 10:43:27.377343",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Tenant",
+   "link_to": "Tenant",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "setting-gear",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Settings",
+   "link_to": "Tenant Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "banknote",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Subscription",
+   "link_to": "tenant_subscription",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "user-cog",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Users",
+   "link_to": "User",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "shield-user",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Roles",
+   "link_to": "Tenant Roles",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "codepen",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Profiles",
+   "link_to": "Tenant Role Profile",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "package",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Modules",
+   "link_to": "Tenant Modules",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "grid",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Add ons",
+   "link_to": "add_ons",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-02-26 13:30:58.186419",
+ "modified_by": "Administrator",
+ "module": "Dt Tenant",
+ "name": "Tenant",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Tenant"
+}

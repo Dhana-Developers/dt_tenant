@@ -1,54 +1,52 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "hash",
- "creation": "2025-12-18 17:50:25.476603",
+ "autoname": "field:module",
+ "creation": "2026-02-25 20:04:29.441085",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "triggered_by",
-  "status",
-  "synced_at",
-  "users_updated",
-  "error_message"
+  "module",
+  "enabled",
+  "source_profile",
+  "description"
  ],
  "fields": [
   {
-   "fieldname": "triggered_by",
+   "fieldname": "module",
    "fieldtype": "Link",
-   "label": "Triggered By",
-   "options": "User"
+   "in_list_view": 1,
+   "label": "Module",
+   "options": "Module Def",
+   "reqd": 1,
+   "unique": 1
   },
   {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "Success\nFailed"
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "options": "0"
   },
   {
-   "fieldname": "synced_at",
-   "fieldtype": "Datetime",
-   "label": "Synced At"
+   "fieldname": "source_profile",
+   "fieldtype": "Data",
+   "label": "Source Profile"
   },
   {
-   "fieldname": "users_updated",
-   "fieldtype": "Int",
-   "label": "Users Updated"
-  },
-  {
-   "fieldname": "error_message",
+   "fieldname": "description",
    "fieldtype": "Small Text",
-   "label": "Error Message"
+   "label": "Description"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-23 11:26:31.122199",
+ "modified": "2026-02-26 02:08:53.076205",
  "modified_by": "Administrator",
  "module": "Dt Tenant",
- "name": "Capability Sync Log",
- "naming_rule": "Random",
+ "name": "Tenant Modules",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -64,22 +62,16 @@
    "write": 1
   },
   {
+   "create": 1,
+   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Tenant Manager",
-   "share": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Tenant User",
-   "share": 1
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

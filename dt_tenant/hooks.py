@@ -139,7 +139,8 @@ doc_events = {
 # 		"on_trash": "method"
 # 	},
     "User": {
-        "after_insert": "dt_tenant.controllers.user_roles.assign_roles"
+        "after_insert": "dt_tenant.controllers.user_roles.assign_roles",
+        "before_save": "dt_tenant.controllers.user_roles.sync_tenant_permissions"
     }
 }
 
@@ -257,4 +258,13 @@ scheduler_events = {
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+fixtures = [
+    {
+        "doctype": "Custom Field",
+        "filters": [
+            ["dt", "=", "User"],
+            ["module", "=", "Dt Tenant"]
+        ]
+    }
+]
 

@@ -1,64 +1,48 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-12-18 13:55:45.789359",
+ "autoname": "field:profile_name",
+ "creation": "2026-02-25 21:03:46.719414",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "master_url",
-  "api_key",
-  "api_secret",
-  "enable_capability_sync",
-  "last_capability_sync"
+  "profile_name",
+  "profile"
  ],
  "fields": [
   {
-   "fieldname": "master_url",
+   "fieldname": "profile_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Master URL",
-   "reqd": 1
+   "label": "Profile Name",
+   "reqd": 1,
+   "unique": 1
   },
   {
-   "fieldname": "api_key",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Master API Key",
-   "reqd": 1
-  },
-  {
-   "fieldname": "api_secret",
-   "fieldtype": "Data",
-   "label": "Master API Secret"
-  },
-  {
-   "default": "0",
-   "fieldname": "enable_capability_sync",
-   "fieldtype": "Check",
-   "label": "Enable Capability Sync"
-  },
-  {
-   "fieldname": "last_capability_sync",
-   "fieldtype": "Datetime",
-   "label": "Last Sync At"
+   "fieldname": "profile",
+   "fieldtype": "Table",
+   "label": "Profile",
+   "options": "Tenant User Role Profile"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "issingle": 1,
  "links": [],
- "modified": "2026-02-23 11:25:58.170789",
+ "modified": "2026-02-26 02:09:08.216963",
  "modified_by": "Administrator",
  "module": "Dt Tenant",
- "name": "Tenant Settings",
+ "name": "Tenant Role Profile",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
    "delete": 1,
    "email": 1,
+   "export": 1,
    "print": 1,
    "read": 1,
+   "report": 1,
    "role": "System Manager",
    "share": 1,
    "write": 1
@@ -67,8 +51,10 @@
    "create": 1,
    "delete": 1,
    "email": 1,
+   "export": 1,
    "print": 1,
    "read": 1,
+   "report": 1,
    "role": "Tenant Manager",
    "share": 1,
    "write": 1

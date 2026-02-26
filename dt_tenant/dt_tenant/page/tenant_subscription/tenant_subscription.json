@@ -1,0 +1,23 @@
+{
+ "content": null,
+ "creation": "2026-02-26 13:24:40.721744",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-02-26 13:24:40.721744",
+ "modified_by": "Administrator",
+ "module": "Dt Tenant",
+ "name": "tenant_subscription",
+ "owner": "Administrator",
+ "page_name": "tenant_subscription",
+ "roles": [
+  {
+   "role": "Tenant Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Tenant Subscription"
+}

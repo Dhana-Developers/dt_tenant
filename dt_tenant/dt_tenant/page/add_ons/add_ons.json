@@ -1,0 +1,27 @@
+{
+ "content": null,
+ "creation": "2026-02-20 11:03:19.576690",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "",
+ "idx": 0,
+ "modified": "2026-02-23 10:41:47.736651",
+ "modified_by": "Administrator",
+ "module": "Dt Tenant",
+ "name": "add_ons",
+ "owner": "Administrator",
+ "page_name": "add_ons",
+ "roles": [
+  {
+   "role": "Tenant User"
+  },
+  {
+   "role": "Tenant Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": "Add ons"
+}
