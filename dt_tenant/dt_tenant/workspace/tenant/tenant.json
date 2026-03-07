@@ -1,7 +1,7 @@
 {
  "app": "dt_tenant",
  "charts": [],
- "content": "[{\"id\":\"header_master\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Tenant Profile</span>\",\"col\":12}},{\"id\":\"4yo-9byJ84\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"fADrLSDxAk\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sync Logs\",\"col\":3}},{\"id\":\"Wavg9p7aKz\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "content": "[{\"id\":\"header_master\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Tenant Profile</span>\",\"col\":12}},{\"id\":\"4yo-9byJ84\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"fADrLSDxAk\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sync Logs\",\"col\":3}},{\"id\":\"LeFCEO-Orm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Add ons\",\"col\":3}},{\"id\":\"S3aKl75Whc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Subscription\",\"col\":3}},{\"id\":\"2-HfUq4McH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Users\",\"col\":3}},{\"id\":\"i6KJ4ePjT3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Roles\",\"col\":3}},{\"id\":\"zLlRvT8mB1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Profiles\",\"col\":3}},{\"id\":\"ULQt7w4Kjs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Modules\",\"col\":3}},{\"id\":\"Wavg9p7aKz\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
  "creation": "2026-02-20 10:43:27.315485",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "label": "Tenant",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-02-23 10:38:17.101567",
+ "modified": "2026-03-05 20:37:42.607403",
  "modified_by": "Administrator",
  "module": "Dt Tenant",
  "name": "Tenant",
@@ -34,6 +34,13 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Add ons",
+   "link_to": "add_ons",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Settings",
    "link_to": "Tenant Settings",
    "type": "DocType"
@@ -41,8 +48,47 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Subscription",
+   "link_to": "tenant_subscription",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Sync Logs",
    "link_to": "Capability Sync Log",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Users",
+   "link_to": "User",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Roles",
+   "link_to": "Tenant Roles",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Profiles",
+   "link_to": "Tenant Role Profile",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Modules",
+   "link_to": "Tenant Modules",
    "stats_filter": "[]",
    "type": "DocType"
   }

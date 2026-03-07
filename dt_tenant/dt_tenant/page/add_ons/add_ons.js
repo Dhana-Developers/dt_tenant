@@ -249,8 +249,211 @@ function render_tab(tabKey) {
     load_extensions(tab, `#grid-${tab.key}`);
 }
 
+function get_extension_from_state(name) {
+
+    for (const tab of TABS) {
+        const ext = tab.state.data.find(e => e.name === name);
+        if (ext) return ext;
+    }
+
+    return null;
+}
+
 function open_extension_details(name) {
-    frappe.msgprint(`Open details for: ${name}`);
+
+    const ext = get_extension_from_state(name);
+
+    if (!ext) {
+        frappe.msgprint("Extension not found");
+        return;
+    }
+
+    const dialog = new frappe.ui.Dialog({
+        title: ext.title || ext.name,
+        size: "large",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "content"
+            }
+        ]
+    });
+
+    const pricing =
+        ext.price_type === "Free"
+            ? "Free"
+            : `${ext.price_amount || 0} (${ext.pricing_model || "one-time"})`;
+
+    const security = ext.security_reviewed ? "✔ Security reviewed" : "⚠ Not reviewed";
+
+    dialog.fields_dict.content.$wrapper.html(`
+        <div class="extension-details">
+
+            <div class="ext-header">
+                <img src="${ext.icon || '/assets/frappe/images/frappe-framework-logo.svg'}" />
+
+                <div>
+                    <h3>${ext.title || ext.name}</h3>
+                    <div class="text-muted">${ext.publisher || ""}</div>
+                </div>
+            </div>
+
+            <hr>
+
+            <p>${ext.description || ext.short_description || ""}</p>
+
+            <hr>
+
+            <div class="ext-meta">
+
+                <div><b>Latest Version:</b> ${ext.latest_version || "-"}</div>
+                <div><b>Installed Version:</b> ${ext.installed_version || "-"}</div>
+
+                <div><b>Frappe Compatibility:</b>
+                    ${ext.min_frappe_version || "?"}
+                    →
+                    ${ext.max_frappe_version || "?"}
+                </div>
+
+                <div><b>Pricing:</b> ${pricing}</div>
+
+                <div><b>Security:</b> ${security}</div>
+
+                <div><b>Visibility:</b> ${ext.visibility}</div>
+
+            </div>
+
+        </div>
+    `);
+
+    dialog.show();
+}
+
+function listen_for_extension_updates() {
+
+    frappe.realtime.on("extension_install_update", (data) => {
+
+        console.log("Realtime update:", data);
+
+        const card = $(`.addon-card[data-extension="${data.extension}"]`);
+        if (!card.length) return;
+
+        const footer = card.find(".addon-card-footer");
+
+        if (data.action_status === "Running") {
+
+            footer.html(`
+                <button class="btn btn-secondary btn-sm" disabled>
+                    Processing...
+                </button>
+            `);
+
+            return;
+        }
+
+        if (data.status === "Installed") {
+
+            footer.html(`
+                <button class="btn btn-danger btn-sm action-btn"
+                        data-action="uninstall"
+                        data-name="${data.extension}">
+                    Uninstall
+                </button>
+            `);
+
+            frappe.show_alert({
+                message: `${data.extension} installed`,
+                indicator: "green"
+            });
+
+            return;
+        }
+
+        if (data.status === "Uninstalled") {
+
+            footer.html(`
+                <button class="btn btn-primary btn-sm action-btn"
+                        data-action="install"
+                        data-name="${data.extension}">
+                    Install
+                </button>
+            `);
+
+            frappe.show_alert({
+                message: `${data.extension} removed`,
+                indicator: "orange"
+            });
+
+            return;
+        }
+
+        if (data.action_status === "Failed") {
+
+            footer.html(`
+                <button class="btn btn-primary btn-sm action-btn"
+                        data-action="install"
+                        data-name="${data.extension}">
+                    Retry
+                </button>
+            `);
+
+            frappe.msgprint({
+                title: "Action Failed",
+                message: data.error || "Unknown error",
+                indicator: "red"
+            });
+        }
+
+    });
+
+}
+
+function init_realtime() {
+
+    if (!frappe.realtime) return;
+
+    frappe.realtime.on("connect", () => {
+        console.log("Realtime connected");
+        listen_for_extension_updates();
+    });
+
+}
+
+function call_extension_action(action, extensionName, btn) {
+
+    btn.prop("disabled", true).text("Processing...");
+
+    const methods = {
+        install: "dt_tenant.api.marketplace.install_extension",
+        upgrade: "dt_tenant.api.marketplace.upgrade_extension",
+        uninstall: "dt_tenant.api.marketplace.uninstall_extension"
+    };
+
+    frappe.call({
+        method: methods[action],
+        args: {
+            extension_name: extensionName
+        },
+        freeze: true,
+        freeze_message: __("Processing request..."),
+
+        callback() {
+            frappe.show_alert({
+                message: __("Action queued"),
+                indicator: "blue"
+            });
+        },
+
+        error() {
+            btn.prop("disabled", false).text(action);
+
+            frappe.msgprint({
+                title: __("Action Failed"),
+                message: __("Unable to start action"),
+                indicator: "red"
+            });
+        }
+    });
 }
 
 frappe.pages['add_ons'].on_page_load = function (wrapper) {
@@ -260,6 +463,8 @@ frappe.pages['add_ons'].on_page_load = function (wrapper) {
         title: __('Add Ons'),
         single_column: true
     });
+
+    init_realtime();
 
     const main = $(wrapper).find('.layout-main-section');
 
@@ -293,26 +498,39 @@ frappe.pages['add_ons'].on_page_load = function (wrapper) {
 				render_tab(defaultTab);
 
     // Tab switching
-				main.find(".nav-link").on("click", function (e) {
-								e.preventDefault();
+    main.find(".nav-link").on("click", function (e) {
+                    e.preventDefault();
 
-								main.find(".nav-link").removeClass("active");
-								$(this).addClass("active");
+                    main.find(".nav-link").removeClass("active");
+                    $(this).addClass("active");
 
-								const tabKey = $(this).data("tab");
-								render_tab(tabKey);
-				});
+                    const tabKey = $(this).data("tab");
+                    render_tab(tabKey);
+    });
 
-				main.on("click", ".addon-card", function (e) {
+    main.on("click", ".addon-card", function (e) {
 
-    // If user clicked a button, do nothing
-    if ($(e.target).closest(".btn").length) {
-        return;
-    }
+        // If user clicked a button, do nothing
+        if ($(e.target).closest(".btn").length) {
+            return;
+        }
 
-    const extensionName = $(this).data("extension");
-    open_extension_details(extensionName);
-});
+        const extensionName = $(this).data("extension");
+        open_extension_details(extensionName);
+    });
+
+    main.on("click", ".action-btn", function (e) {
+
+        e.stopPropagation();
+
+        const btn = $(this);
+        const action = btn.data("action");
+        const extensionName = btn.data("name");
+
+        call_extension_action(action, extensionName, btn);
+
+    });
+
 };
 
 $('<style>').text(`
@@ -449,6 +667,33 @@ $('<style>').text(`
 .addon-card .btn {
     padding: 4px 10px;
     font-size: 12px;
+}
+
+`).appendTo('head');
+
+$('<style>').text(`
+
+.extension-details {
+    padding: 10px;
+}
+
+.ext-header {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.ext-header img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}
+
+.ext-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    font-size: 13px;
 }
 
 `).appendTo('head');
