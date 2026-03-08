@@ -3,6 +3,24 @@ import frappe
 from urllib.parse import urlparse
 
 
+def normalize_version(version):
+    if not version:
+        return [0, 0, 0]
+
+    # Remove anything after first hyphen (dev, beta, rc, etc.)
+    clean = version.split("-")[0]
+
+    parts = clean.split(".")
+
+    normalized = []
+    for part in parts:
+        try:
+            normalized.append(int(part))
+        except ValueError:
+            normalized.append(0)
+
+    return normalized
+
 @frappe.whitelist()
 def get_marketplace_extensions(tab=None, limit=12, offset=0):
 
@@ -13,6 +31,12 @@ def get_marketplace_extensions(tab=None, limit=12, offset=0):
 
     fqdn = urlparse(frappe.utils.get_url()).hostname
 
+    frappe_version = frappe.__version__
+    normalized_frappe_version=normalize_version(frappe_version)
+    frappe_major = normalized_frappe_version[0]
+    frappe_minor = normalized_frappe_version[1]
+    frappe_patch = normalized_frappe_version[2]
+
     response = requests.get(
         f"{settings.master_url.rstrip('/')}/api/method/dt_master.api.extensions.get_extensions",
         headers={
@@ -22,7 +46,10 @@ def get_marketplace_extensions(tab=None, limit=12, offset=0):
             "tab": tab,
             "limit": limit,
             "offset": offset,
-            "fqdn": fqdn
+            "fqdn": fqdn,
+            "frappe_major": frappe_major,
+            "frappe_minor": frappe_minor,
+            "frappe_patch": frappe_patch
         },
         timeout=10,
     )

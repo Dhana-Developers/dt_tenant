@@ -40,46 +40,6 @@ def apply_capabilities_to_user(user_name, allowed_roles, allowed_modules):
 
     user.save(ignore_permissions=True)
 
-# def apply_capabilities_to_user(user_name):
-#     user = frappe.get_doc("User", user_name)
-
-#     allowed_roles = set(
-#         frappe.get_all("Tenant Roles",
-#                        filters={"enabled": 1},
-#                        pluck="role")
-#     ) | ALWAYS_KEEP_ROLES
-
-# 🏗 Proper Implementation
-
-### Step 1 — Sync Tenant Role Cache
-
-# def sync_tenant_roles(allowed_roles, source_profile=None):
-#     existing = frappe.get_all("Tenant Roles", pluck="role")
-
-#     allowed_set = set(allowed_roles)
-
-#     # Disable roles not allowed anymore
-#     for role in existing:
-#         if role not in allowed_set:
-#             doc = frappe.get_doc("Tenant Roles", role)
-#             doc.enabled = 0
-#             doc.save(ignore_permissions=True)
-
-#     # Insert or enable allowed roles
-#     for role in allowed_set:
-#         if frappe.db.exists("Tenant Roles", role):
-#             doc = frappe.get_doc("Tenant Roles", role)
-#             doc.enabled = 1
-#             doc.source_profile = source_profile
-#             doc.save(ignore_permissions=True)
-#         else:
-#             frappe.get_doc({
-#                 "doctype": "Tenant Roles",
-#                 "role": role,
-#                 "enabled": 1,
-#                 "source_profile": source_profile
-#             }).insert(ignore_permissions=True)
-
 def sync_tenant_roles(allowed_roles, source_profile=None):
     allowed_set = set(allowed_roles)
 
@@ -130,33 +90,6 @@ def sync_tenant_roles(allowed_roles, source_profile=None):
         doc.enabled = 1
         doc.source_profile = source_profile
         doc.save(ignore_permissions=True)
-
-# def sync_tenant_modules(allowed_modules, source_profile=None):
-#     existing = frappe.get_all("Tenant Modules", pluck="module")
-
-#     allowed_set = set(allowed_modules)
-
-#     # Disable modules not allowed anymore
-#     for module in existing:
-#         if module not in allowed_set:
-#             doc = frappe.get_doc("Tenant Modules", module)
-#             doc.enabled = 0
-#             doc.save(ignore_permissions=True)
-
-#     # Insert or enable allowed modules
-#     for module in allowed_set:
-#         if frappe.db.exists("Tenant Modules", module):
-#             doc = frappe.get_doc("Tenant Modules", module)
-#             doc.enabled = 1
-#             doc.source_profile = source_profile
-#             doc.save(ignore_permissions=True)
-#         else:
-#             frappe.get_doc({
-#                 "doctype": "Tenant Modules",
-#                 "module": module,
-#                 "enabled": 1,
-#                 "source_profile": source_profile
-#             }).insert(ignore_permissions=True)
 
 def sync_tenant_modules(allowed_modules, source_profile=None):
     allowed_set = set(allowed_modules)

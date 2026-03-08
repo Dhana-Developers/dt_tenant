@@ -4,7 +4,7 @@ from dt_tenant.controllers.capabilities import CapabilitySyncError
 
 FAILURE_COOLDOWN_MINUTES = 60
 
-def _recent_failure_within(settings, minutes):
+def _recent_failure_within(minutes):
     last_log = frappe.get_all(
         "Capability Sync Log",
         filters={"status": "Failed"},
@@ -34,7 +34,7 @@ def run_scheduled_sync():
         return
 
     # 3. Cooldown after failure
-    if _recent_failure_within(settings, FAILURE_COOLDOWN_MINUTES):
+    if _recent_failure_within(FAILURE_COOLDOWN_MINUTES):
         return
 
     try:

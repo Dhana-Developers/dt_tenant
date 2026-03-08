@@ -206,7 +206,6 @@ function load_extensions(tab, gridSelector) {
             state.data.push(...r.message);
             state.offset += r.message.length;
             state.initialized = true;
-
             // Render from state
             render_from_state(tab, gridSelector);
         }
