@@ -1,1 +1,1 @@
-__version__ = "1.5.0" # feat: Subscription page for tenant managers
+__version__ = "1.6.0" # feat: Add payment gateways to enable transactions

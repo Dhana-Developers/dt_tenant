@@ -187,7 +187,8 @@ scheduler_events = {
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "dt_tenant.event.get_events"
+# 	# "frappe.desk.doctype.event.event.get_events": "dt_tenant.event.get_events",
+#     "frappe.desk.desktop.get_desktop_page": "dt_tenant.dt_tenant.workspace.workspace_filter.filter_workspace"
 # }
 #
 # each overriding function accepts a `data` argument;
@@ -208,7 +209,10 @@ scheduler_events = {
 
 # Request Events
 # ----------------
-# before_request = ["dt_tenant.utils.before_request"]
+# before_request = [
+#     # "dt_tenant.utils.before_request",
+#     "dt_tenant.security.subscription_guard.enforce_subscription"
+#     ]
 # after_request = ["dt_tenant.utils.after_request"]
 
 # Job Events
@@ -266,5 +270,9 @@ fixtures = [
             ["module", "=", "Dt Tenant"]
         ]
     }
+]
+
+payment_gateway_settings = [
+    "Flutterwave Settings"
 ]
 

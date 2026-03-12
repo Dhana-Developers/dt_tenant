@@ -4,8 +4,31 @@ from frappe.utils import nowdate, getdate
 
 PROTECTED_ROLES = {"System Manager", "Tenant Manager"}
 DESK_ROLES = {"All", "Desk User", "Tenant Manager"}
+ALLOWED_SYSTEM_MODULES = {"Desk", "Dt Tenant"}
+
+def _restrict_system_modules(user):
+
+    modules = frappe.get_all(
+        "Module Def",
+        pluck="name"
+    )
+
+    for module in modules:
+
+        if module in ALLOWED_SYSTEM_MODULES:
+            continue
+
+        frappe.db.delete(
+            "User Permission",
+            {
+                "user": user,
+                "allow": "Module Def",
+                "for_value": module
+            }
+        )
 
 def _disable_non_admin_users():
+
     users = frappe.get_all(
         "User",
         filters={"enabled": 1, "name": ["!=", "Administrator"]},
@@ -20,29 +43,71 @@ def _disable_non_admin_users():
         if "System Manager" in roles:
             continue
 
-        # Tenant Manager restriction (not disabled)
+        # Tenant Manager restriction
         if "Tenant Manager" in roles:
 
-            # Save current roles for restoration
+            # backup system roles
             frappe.cache().set_value(
                 f"tenant_roles_backup:{user}",
                 list(roles)
             )
 
-            # Remove roles except minimal desk roles
+            # keep minimal desk roles
             for role in roles:
                 if role not in DESK_ROLES:
                     frappe.db.delete(
                         "Has Role",
+                        {"parent": user, "role": role}
+                    )
+
+            _restrict_system_modules(user)
+
+            # ---------------------------
+            # restrict tenant roles
+            # ---------------------------
+
+            allowed_tenant_roles = {"Tenant Manager", "Tenant User"}
+
+            tenant_roles = frappe.get_all(
+                "Tenant User Role",
+                filters={"parent": user},
+                pluck="role"
+            )
+
+            for role in tenant_roles:
+                if role not in allowed_tenant_roles:
+                    frappe.db.delete(
+                        "Tenant User Role",
                         {
                             "parent": user,
                             "role": role
                         }
                     )
+            # ---------------------------
+            # restrict tenant modules
+            # ---------------------------
+
+            allowed_modules = {"Desk", "Dt Tenant"}
+
+            modules = frappe.get_all(
+                "Tenant Allowed Module",
+                filters={"parent": user},
+                pluck="module"
+            )
+
+            for module in modules:
+                if module not in allowed_modules:
+                    frappe.db.delete(
+                        "Tenant Allowed Module",
+                        {
+                            "parent": user,
+                            "module": module
+                        }
+                    )
 
             continue
 
-        # All other users disabled
+        # all other users disabled
         frappe.db.set_value("User", user, "enabled", 0)
 
 
@@ -126,22 +191,21 @@ def _enable_auto_sync():
 
 def enforce_lifecycle(caps):
     status = caps.get("subscription_status")
-    trial_end = caps.get("trial_period_end")
-    end_date = caps.get("end_date")
 
-    today = getdate(nowdate())
-
-    if status == "Trialing" and trial_end and today > getdate(trial_end):
+    if status in ("Unpaid", "Completed"):
         _disable_non_admin_users()
         _disable_auto_sync()
-        return "trial_expired"
+        return "restricted"
 
-    if end_date and today > getdate(end_date):
-        _disable_non_admin_users()
-        _disable_auto_sync()
-        return "subscription_expired"
+    if status == "Grace Period":
+        # still allow access but show banner in UI
+        _enable_auto_sync()
+        _enable_all_users(caps)
+        return "grace"
 
-    # Active / valid trial
-    _enable_auto_sync()
-    _enable_all_users(caps)
-    return "active"
+    if status in ("Active", "Trialing", "Cancelled"):
+        _enable_auto_sync()
+        _enable_all_users(caps)
+        return "active"
+
+    return "unknown"

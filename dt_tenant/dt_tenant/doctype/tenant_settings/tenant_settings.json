@@ -9,7 +9,8 @@
   "api_key",
   "api_secret",
   "enable_capability_sync",
-  "last_capability_sync"
+  "last_capability_sync",
+  "capability_snapshot"
  ],
  "fields": [
   {
@@ -41,13 +42,18 @@
    "fieldname": "last_capability_sync",
    "fieldtype": "Datetime",
    "label": "Last Sync At"
+  },
+  {
+   "fieldname": "capability_snapshot",
+   "fieldtype": "Long Text",
+   "label": "Capability Snapshot"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-23 11:25:58.170789",
+ "modified": "2026-03-10 20:59:40.384094",
  "modified_by": "Administrator",
  "module": "Dt Tenant",
  "name": "Tenant Settings",

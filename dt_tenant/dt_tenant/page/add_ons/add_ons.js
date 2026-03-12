@@ -420,39 +420,62 @@ function init_realtime() {
 
 function call_extension_action(action, extensionName, btn) {
 
-    btn.prop("disabled", true).text("Processing...");
-
-    const methods = {
-        install: "dt_tenant.api.marketplace.install_extension",
-        upgrade: "dt_tenant.api.marketplace.upgrade_extension",
-        uninstall: "dt_tenant.api.marketplace.uninstall_extension"
+    const actionLabels = {
+        install: __("install"),
+        upgrade: __("upgrade"),
+        uninstall: __("uninstall")
     };
 
-    frappe.call({
-        method: methods[action],
-        args: {
-            extension_name: extensionName
-        },
-        freeze: true,
-        freeze_message: __("Processing request..."),
+    frappe.confirm(
+        __("Are you sure you want to {0} the extension {1}?", [
+            actionLabels[action],
+            extensionName
+        ]),
+        () => {
 
-        callback() {
-            frappe.show_alert({
-                message: __("Action queued"),
-                indicator: "blue"
+            btn.prop("disabled", true).text(__("Processing..."));
+
+            const methods = {
+                install: "dt_tenant.api.marketplace.install_extension",
+                upgrade: "dt_tenant.api.marketplace.upgrade_extension",
+                uninstall: "dt_tenant.api.marketplace.uninstall_extension"
+            };
+
+            frappe.call({
+                method: methods[action],
+                args: {
+                    extension_name: extensionName
+                },
+                freeze: true,
+                freeze_message: __("Processing request..."),
+
+                callback() {
+                    frappe.show_alert({
+                        message: __("Action queued"),
+                        indicator: "blue"
+                    });
+                },
+
+                error() {
+                    btn.prop("disabled", false).text(action);
+
+                    frappe.msgprint({
+                        title: __("Action Failed"),
+                        message: __("Unable to start action"),
+                        indicator: "red"
+                    });
+                }
             });
+
         },
-
-        error() {
-            btn.prop("disabled", false).text(action);
-
-            frappe.msgprint({
-                title: __("Action Failed"),
-                message: __("Unable to start action"),
-                indicator: "red"
+        () => {
+            // optional cancel handler
+            frappe.show_alert({
+                message: __("Action cancelled"),
+                indicator: "orange"
             });
         }
-    });
+    );
 }
 
 frappe.pages['add_ons'].on_page_load = function (wrapper) {

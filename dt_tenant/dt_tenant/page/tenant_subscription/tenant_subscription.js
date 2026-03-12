@@ -32,7 +32,52 @@ const SUB_TABS = [
     }
 ];
 
-let CURRENT_PLAN = null;
+const SUBSCRIPTION_STATUS = {
+
+    Trialing: {
+        label: "Trial",
+        allowAccess: true,
+        showBanner: false
+    },
+
+    Active: {
+        label: "Active",
+        allowAccess: true,
+        showBanner: false
+    },
+
+    "Grace Period": {
+        label: "Payment Overdue",
+        allowAccess: true,
+        showBanner: true
+    },
+
+    Unpaid: {
+        label: "Unpaid",
+        allowAccess: false,
+        showBanner: true
+    },
+
+    Cancelled: {
+        label: "Cancelled",
+        allowAccess: true,
+        showBanner: false
+    },
+
+    Completed: {
+        label: "Completed",
+        allowAccess: false,
+        showBanner: false
+    }
+
+};
+
+const PLAN_CHANGE_ALLOWED = ["Unpaid", "Grace Period"];
+
+let CURRENT_SUBSCRIPTION = {
+    plan: null,
+    status: null
+};
 
 function render_empty_state(target, message){
 
@@ -124,7 +169,8 @@ function load_current_plan(tab) {
                 return;
             }
 
-												CURRENT_PLAN = r.message.subscription_plan;
+			CURRENT_SUBSCRIPTION.plan = r.message.subscription_plan;
+            CURRENT_SUBSCRIPTION.status = r.message.subscription_status;
 
             tab.state.data = r.message;
             tab.state.initialized = true;
@@ -145,6 +191,24 @@ function load_current_plan(tab) {
 
 }
 
+function get_status_badge(status){
+
+    const colors = {
+        Trialing: "orange",
+        Active: "green",
+        "Grace Period": "orange",
+        Unpaid: "red",
+        Cancelled: "gray",
+        Completed: "gray"
+    };
+
+    return `
+        <span class="status-badge status-${colors[status] || "gray"}">
+            ${status}
+        </span>
+    `;
+}
+
 function render_subscription_content(tabKey, data) {
 
     if (tabKey !== "current_plan") return;
@@ -156,7 +220,10 @@ function render_subscription_content(tabKey, data) {
         <div class="plan-card">
 
             <h3>${data.subscription_plan}</h3>
-            <div class="text-muted">${data.subscription_status}</div>
+
+            <div class="text-muted">
+                ${get_status_badge(data.subscription_status)}
+            </div>
 
             <div class="plan-meta mt-3">
                 <div><b>Trial Ends:</b> ${data.trial_period_end || "N/A"}</div>
@@ -338,6 +405,8 @@ function render_available_plans(plans, state){
         const plan = row.plan || {};
         const machine = row.machine_constraints || {};
         const profile = row.capability_profile || {};
+        const canChangePlan = PLAN_CHANGE_ALLOWED.includes(CURRENT_SUBSCRIPTION.status);
+
 
         html += `
             <div class="plan-option"
@@ -366,14 +435,16 @@ function render_available_plans(plans, state){
                     ${profile.description || ""}
                 </p>
 
-																${
-																				plan.name === CURRENT_PLAN
-																				? `<span class="plan-current">Current Plan</span>`
-																				: `<button class="btn btn-primary btn-sm upgrade-plan"
-																								data-plan="${plan.name}">
-																								Choose Plan
-																							</button>`
-																}
+                ${
+                    plan.name === CURRENT_SUBSCRIPTION.plan
+                    ? `<span class="plan-current">Current Plan</span>`
+                    : canChangePlan
+                        ? `<button class="btn btn-primary btn-sm upgrade-plan"
+                                data-plan="${plan.name}">
+                                Choose Plan
+                        </button>`
+                        : `<span class="text-muted small">Plan locked during active cycle</span>`
+                }
 
             </div>
         `;
@@ -646,9 +717,10 @@ function render_subscription_banner(capabilities, invoices){
 
     if(!capabilities) return;
 
-    const expired = capabilities.subscription_status !== "Active";
+    const status = capabilities.subscription_status;
+    const config = SUBSCRIPTION_STATUS[status];
 
-    if(!expired) return;
+    if(!config || !config.showBanner) return;
 
     const unpaid = (invoices || []).find(inv => inv.outstanding_amount > 0);
 
@@ -658,14 +730,14 @@ function render_subscription_banner(capabilities, invoices){
         <div class="subscription-banner">
 
             <div class="banner-left">
-                ⚠ Subscription expired.
+                ⚠ Subscription status: <b>${status}</b>.
                 Invoice <b>${unpaid.name}</b> is unpaid.
                 Outstanding:
                 <b>${unpaid.currency} ${unpaid.outstanding_amount}</b>
             </div>
 
             <div class="banner-right">
-                <button class="btn btn-primary btn-sm pay-banner-invoice"
+                <button class="btn btn-primary btn-sm pay-banner-invoice pay-invoice"
                     data-invoice="${unpaid.name}">
                     Pay Now
                 </button>
@@ -673,11 +745,258 @@ function render_subscription_banner(capabilities, invoices){
 
         </div>
     `);
-				$(document).on("click",".pay-banner-invoice",function(){
 
-								render_invoice_details(unpaid);
+}
 
-				});
+function show_payment_gateways(invoice, btn){
+
+    frappe.call({
+        method: "dt_tenant.api.tenant_subscription.get_payment_gateways",
+        callback: function(r){
+
+            const gateways = r.message || [];
+
+            if(!gateways.length){
+                frappe.msgprint("No payment gateways available");
+                return;
+            }
+
+            let html = `<div class="gateway-list">`;
+
+            gateways.forEach(g => {
+
+                html += `
+                    <button class="btn btn-primary gateway-option"
+                        data-gateway="${g.type}"
+                        data-instance="${g.instance}"
+                        data-controller="${g.controller}"
+                        data-requires-method="${g.requires_payment_method}"
+                        data-invoice="${invoice}">
+                        ${g.label}
+                    </button>
+                `;
+            });
+
+            html += `</div>`;
+
+            const dialog = new frappe.ui.Dialog({
+                title: "Choose Payment Method",
+                fields:[
+                    {
+                        fieldtype:"HTML",
+                        fieldname:"gateways"
+                    }
+                ]
+            });
+
+            dialog.fields_dict.gateways.$wrapper.html(html);
+
+            dialog.show();
+
+            btn.prop("disabled", true);
+
+        }
+    });
+
+}
+
+function show_payment_methods(invoice, gateway,instance){
+
+    frappe.call({
+        method: "dt_tenant.api.tenant_subscription.get_payment_methods",
+        args: {
+            invoice_name: invoice,
+            gateway: gateway,
+            gateway_instance: instance
+        },
+        callback: function(r){
+
+            const methods = r.message || [];
+
+            if(!methods.length){
+
+                frappe.confirm(
+                    "No saved cards. Add a new card?",
+                    () => {
+                        open_card_dialog(invoice, gateway, instance);
+                    }
+                );
+
+                return;
+            }
+
+            let html = `<div class="payment-method-list">`;
+
+            methods.forEach(m => {
+
+                const label = `${m.card?.network || "CARD"} ****${m.card?.last4 || ""}`;
+
+                html += `
+                    <button class="payment-method-option"
+                        data-method="${m.id}"
+                        data-instance="${instance}"
+                        data-invoice="${invoice}"
+                        data-gateway="${gateway}">
+                        ${label}
+                    </button>
+                `;
+            });
+
+            /* ADD CARD BUTTON */
+
+            html += `
+                <button class="btn btn-secondary add-payment-method"
+                    data-instance="${instance}"
+                    data-gateway="${gateway}"
+                    data-invoice="${invoice}">
+                    + Add New Card
+                </button>
+            `;
+
+            html += `</div>`;
+
+            const dialog = new frappe.ui.Dialog({
+                title: __("Choose Payment Method"),
+                fields: [
+                    {
+                        fieldtype: "HTML",
+                        fieldname: "methods"
+                    }
+                ]
+            });
+
+            dialog.fields_dict.methods.$wrapper.html(html);
+
+            dialog.show();
+        }
+    });
+
+}
+
+function generate_nonce() {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let nonce = "";
+    for (let i = 0; i < 12; i++) {
+        nonce += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return nonce;
+}
+
+function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function encryptField(value, base64Key, nonce) {
+
+    const key = base64ToBytes(base64Key);
+    const iv = asmCrypto.string_to_bytes(nonce);
+    const data = asmCrypto.string_to_bytes(value);
+
+    const encrypted = asmCrypto.AES_GCM.encrypt(data, key, iv);
+
+    return btoa(String.fromCharCode(...encrypted));
+}
+
+async function encrypt_card(values,gateway, instance) {
+
+    const r = await frappe.call({
+        method: "dt_tenant.api.tenant_subscription.get_encryption_key",
+        args: {
+            gateway: gateway,
+            gateway_instance: instance
+        }
+    });
+
+    const key = r.message;
+    const nonce = generate_nonce();
+
+    return {
+        nonce: nonce,
+        encrypted_card_number: encryptField(values.number, key, nonce),
+        encrypted_expiry_month: encryptField(values.expiry_month, key, nonce),
+        encrypted_expiry_year: encryptField(values.expiry_year, key, nonce),
+        encrypted_cvv: encryptField(values.cvv, key, nonce)
+    };
+}
+
+async function open_card_dialog(invoice, gateway, instance){
+
+    const dialog = new frappe.ui.Dialog({
+        title: "Add Card",
+
+        fields: [
+            {
+                fieldtype: "Data",
+                fieldname: "number",
+                label: "Card Number",
+                reqd: 1
+            },
+            {
+                fieldtype: "Data",
+                fieldname: "expiry_month",
+                label: "Expiry Month",
+                reqd: 1
+            },
+            {
+                fieldtype: "Data",
+                fieldname: "expiry_year",
+                label: "Expiry Year",
+                reqd: 1
+            },
+            {
+                fieldtype: "Data",
+                fieldname: "cvv",
+                label: "CVV",
+                reqd: 1
+            }
+        ],
+
+        primary_action_label: "Save Card",
+
+        primary_action: async function(values){
+
+            frappe.dom.freeze("Encrypting card...");
+
+            const encrypted = await encrypt_card(values,gateway,instance);
+
+            frappe.dom.unfreeze();
+
+            frappe.dom.freeze("Adding card...");
+
+            frappe.call({
+                method: "dt_tenant.api.tenant_subscription.create_payment_method",
+                args:{
+                    gateway: gateway,
+                    gateway_instance: instance,
+                    reference: invoice,   // added
+                    type: "card",
+                    details: JSON.stringify(encrypted)
+                },
+
+                callback(r){
+
+                    frappe.dom.unfreeze();
+
+                    dialog.hide();
+
+                    frappe.show_alert({
+                        message: "Card added",
+                        indicator: "green"
+                    });
+
+                    show_payment_methods(invoice, gateway, instance);
+                }
+            });
+
+        }
+    });
+
+    dialog.show();
 }
 
 frappe.pages['tenant_subscription'].on_page_load = function(wrapper) {
@@ -702,7 +1021,7 @@ frappe.pages['tenant_subscription'].on_page_load = function(wrapper) {
 
     main.html(`
         <div class="subscription-wrapper">
-												<div id="subscription-banner"></div>
+			<div id="subscription-banner"></div>
             <div class="subscription-tabs">
                 <ul class="nav nav-tabs" id="subscription-tabs">
                     ${tabListHtml}
@@ -725,59 +1044,217 @@ frappe.pages['tenant_subscription'].on_page_load = function(wrapper) {
 
         render_subscription_tab($(this).data("tab"));
     });
-				$(document).on("click",".load-more-plans",function(){
+    $(document).on("click",".load-more-plans",function(){
 
-								const btn = $(this);
-								btn.prop("disabled", true).text("Loading...");
+        const btn = $(this);
+        btn.prop("disabled", true).text("Loading...");
 
-								const tab = SUB_TABS.find(t => t.key === "available_plans");
+        const tab = SUB_TABS.find(t => t.key === "available_plans");
 
-								load_available_plans(tab);
+        load_available_plans(tab);
 
-				});
+    });
 
-				$(document).on("click", ".upgrade-plan", function(e){
+    $(document).on("click", ".upgrade-plan", function(e){
 
-								e.stopPropagation();
+        e.stopPropagation();
 
-								const btn = $(this);
-								const plan = btn.data("plan");
+        const btn = $(this);
+        const plan = btn.data("plan");
 
-								frappe.confirm(
-												`Switch subscription to this plan?`,
-												function(){
+        frappe.confirm(
+            `Switch subscription to this plan?`,
+            function(){
 
-																btn.prop("disabled", true).text("Updating...");
+                btn.prop("disabled", true).text("Updating...");
 
-																frappe.call({
-																				method: "dt_tenant.api.tenant_subscription.change_subscription_plan",
-																				args: {
-																								plan_name: plan
-																				},
-																				callback: function(r){
+                frappe.call({
+                    method: "dt_tenant.api.tenant_subscription.change_subscription_plan",
+                    args: {
+                                    plan_name: plan
+                    },
+                    callback: function(r){
 
-																								btn.prop("disabled", false).text("Choose Plan");
+                        btn.prop("disabled", false).text("Choose Plan");
 
-																								if(!r.message){
-																												frappe.msgprint("Unable to change plan");
-																												return;
-																								}
+                        if(!r.message){
+                                        frappe.msgprint("Unable to change plan");
+                                        return;
+                        }
 
-																								frappe.show_alert({
-																												message: "Subscription updated",
-																												indicator: "green"
-																								});
+                        frappe.show_alert({
+                                        message: "Subscription updated",
+                                        indicator: "green"
+                        });
 
-																								/* reload subscription data */
-																								const tab = SUB_TABS.find(t => t.key === "current_plan");
-																								tab.state.initialized = false;
-																				}
-																});
+                        /* reload subscription data */
+                        const tab = SUB_TABS.find(t => t.key === "current_plan");
+                        tab.state.initialized = false;
+                    }
+                });
 
-												}
-								);
+            }
+        );
 
-				});
+    });
+
+    $(document).on("click", ".pay-invoice", function (e) {
+
+        e.stopPropagation();
+
+        const btn = $(this);
+        const invoice = btn.data("invoice");
+        btn.prop("disabled", true);
+
+        frappe.confirm(
+            __("Proceed to payment for invoice {0}?", [invoice]),
+            function () {
+
+                show_payment_gateways(invoice, btn);
+
+            }
+        );
+
+    });
+
+    $(document).on("click", ".gateway-option", function(){
+
+        const gateway = $(this).data("gateway");
+        const invoice = $(this).data("invoice");
+        const requiresMethods = $(this).data("requires-method");
+        const instance = $(this).data("instance");
+
+        if (gateway === "MPesa") {
+
+            const dialog = new frappe.ui.Dialog({
+                title: "Enter M-Pesa Number",
+                fields: [
+                    {
+                        label: "Phone Number",
+                        fieldname: "phone",
+                        fieldtype: "Data",
+                        reqd: 1
+                    }
+                ],
+                primary_action_label: "Pay",
+                primary_action(values) {
+
+                    frappe.call({
+                        method: "dt_tenant.api.tenant_subscription.pay_invoice",
+                        args: {
+                            invoice_name: invoice,
+                            gateway: gateway,
+                            gateway_instance: instance,
+                            phone: values.phone
+                        },
+                        freeze: true,
+                        freeze_message: "Sending STK Push...",
+
+                        callback(r) {
+
+                            if(!r.message){
+                                frappe.msgprint("Payment request failed");
+                                return;
+                            }
+
+                            frappe.show_alert({
+                                message: "STK push sent to phone",
+                                indicator: "blue"
+                            });
+
+                            dialog.hide();
+                        }
+                    });
+                }
+            });
+
+            dialog.show();
+            return;
+        }
+
+        if (requiresMethods) {
+            show_payment_methods(invoice, gateway, instance);
+            return;
+        }
+
+        frappe.call({
+            method: "dt_tenant.api.tenant_subscription.pay_invoice",
+            args: {
+                invoice_name: invoice,
+                gateway: gateway,
+                gateway_instance: instance
+            },
+            freeze: true,
+            freeze_message: __("Processing payment..."),
+
+            callback: function(r){
+
+                if(!r.message || !r.message.success){
+                    frappe.msgprint("Payment failed");
+                    return;
+                }
+
+                frappe.show_alert({
+                    message: "Payment successful",
+                    indicator: "green"
+                });
+
+                location.reload();
+            }
+        });
+
+    });
+
+    $(document).on("click", ".payment-method-option", function(){
+
+        const method = $(this).data("method");
+        const invoice = $(this).data("invoice");
+        const gateway = $(this).data("gateway");
+        const instance = $(this).data("instance");
+
+        frappe.call({
+            method: "dt_tenant.api.tenant_subscription.pay_invoice",
+            args: {
+                invoice_name: invoice,
+                gateway: gateway,
+                gateway_instance: instance,
+                payment_method_id: method
+            },
+            freeze: true,
+            freeze_message: __("Processing payment..."),
+
+            callback: function(r){
+
+                if(!r.message || !r.message.success){
+                    frappe.msgprint("Payment failed");
+                    return;
+                }
+
+                frappe.show_alert({
+                    message: "Payment successful",
+                    indicator: "green"
+                });
+
+                location.reload();
+            }
+        });
+
+    });
+
+    $(document).on("click", ".add-payment-method", function(){
+
+        frappe.require([
+            "https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js",
+            "https://cdnjs.cloudflare.com/ajax/libs/asmCrypto/2.3.2/asmcrypto.all.es5.min.js"
+        ]);
+
+        const gateway = $(this).data("gateway");
+        const instance = $(this).data("instance");
+        const invoice = $(this).data("invoice");
+
+        open_card_dialog(invoice, gateway, instance);
+
+    });
 
 };
 
@@ -1012,6 +1489,95 @@ $('<style>').text(`
     display:flex;
     gap:8px;
 }
+`).appendTo('head');
+
+$('<style>').text(`
+.status-badge{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:600;
+    margin-top:6px;
+}
+
+.status-green{ background:#16a34a20; color:#22c55e; }
+.status-orange{ background:#f59e0b20; color:#f59e0b; }
+.status-red{ background:#ef444420; color:#ef4444; }
+.status-gray{ background:#6b728020; color:#9ca3af; }
+`).appendTo('head');
+
+$('<style>').text(`
+
+.payment-method-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:10px;
+}
+
+.payment-method-option{
+    width:100%;
+    padding:12px 16px;
+
+    border:1px solid var(--border-color);
+    border-radius:8px;
+
+    background:var(--card-bg);
+    color:var(--text-color);
+
+    font-weight:500;
+    text-align:center;
+
+    transition:all 0.15s ease;
+}
+
+.payment-method-option:hover{
+    border-color:var(--text-color);
+    transform:translateY(-1px);
+    background:var(--card-bg);
+}
+
+.payment-method-option:active{
+    transform:translateY(0);
+}
+
+`).appendTo('head');
+
+$('<style>').text(`
+
+.gateway-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:10px;
+}
+
+.gateway-option{
+    width:100%;
+    padding:12px 16px;
+
+    border:1px solid var(--border-color);
+    border-radius:8px;
+
+    background:var(--card-bg);
+    color:var(--text-color);
+
+    font-weight:500;
+    text-align:center;
+
+    transition:all 0.15s ease;
+}
+
+.gateway-option:hover{
+    border-color:var(--text-color);
+    transform:translateY(-1px);
+}
+
+.gateway-option:active{
+    transform:translateY(0);
+}
+
 `).appendTo('head');
 
 if (!document.getElementById("tenant-subscription-styles")) {

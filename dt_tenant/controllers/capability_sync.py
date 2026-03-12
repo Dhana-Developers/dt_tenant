@@ -147,6 +147,11 @@ def sync_tenant_modules(allowed_modules, source_profile=None):
 def resync_capabilities():
     try:
         caps = fetch_capabilities()
+        frappe.db.set_single_value(
+            "Tenant Settings",
+            "capability_snapshot",
+            frappe.as_json(caps)
+        )
     except CapabilitySyncError as e:
         log_capability_sync(
             status="Failed",

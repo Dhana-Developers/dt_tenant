@@ -36,3 +36,20 @@ def fetch_capabilities():
         raise CapabilitySyncError("Invalid response from master")
 
     return data
+
+def get_capabilities():
+
+    caps = getattr(frappe.local, "tenant_capabilities", None)
+
+    if caps:
+        return caps
+
+    snapshot = frappe.db.get_single_value(
+        "Tenant Settings",
+        "capability_snapshot"
+    )
+
+    if snapshot:
+        return frappe.parse_json(snapshot)
+    else:
+        return fetch_capabilities()

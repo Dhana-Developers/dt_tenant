@@ -7,10 +7,16 @@ from dt_tenant.controllers.capability_sync import resync_capabilities
 
 @frappe.whitelist()
 def get_capabilities():
-    return fetch_capabilities()
+        caps = fetch_capabilities()
+        frappe.db.set_single_value(
+            "Tenant Settings",
+            "capability_snapshot",
+            frappe.as_json(caps)
+        )
+        return caps
 
 
-def _master_request(method, payload=None):
+def _master_request(method, payload=None, http_method="POST"):
 
     settings = frappe.get_single("Tenant Settings")
 
@@ -20,8 +26,7 @@ def _master_request(method, payload=None):
     url = f"{settings.master_url.rstrip('/')}/api/method/{method}"
 
     headers = {
-        "Authorization": f"token {settings.api_key}:{settings.api_secret}",
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Authorization": f"token {settings.api_key}:{settings.api_secret}"
     }
 
     fqdn = urlparse(frappe.utils.get_url()).hostname
@@ -29,7 +34,13 @@ def _master_request(method, payload=None):
     data = payload or {}
     data["fqdn"] = fqdn
 
-    response = requests.post(url, headers=headers, data=data, timeout=5)
+    if http_method == "GET":
+        response = requests.get(url, headers=headers, params=data, timeout=(5, 60))
+    else:
+        response = requests.post(url, headers=headers, data=data, timeout=(5, 60))
+
+    if response.status_code != 200:
+        frappe.log_error(response.text, "MASTER API ERROR")
 
     response.raise_for_status()
 
@@ -100,3 +111,61 @@ def change_subscription_plan(plan_name):
     resync_capabilities()
 
     return result
+
+@frappe.whitelist()
+def get_payment_gateways():
+
+    return _master_request(
+        "dt_master.api.billing.get_payment_gateways"
+    )
+
+@frappe.whitelist()
+def get_payment_methods(invoice_name, gateway,gateway_instance):
+
+    return _master_request(
+        "dt_master.api.billing.get_payment_methods",
+        {
+            "invoice_name": invoice_name,
+            "gateway": gateway,
+            "gateway_instance": gateway_instance
+        }
+    )
+
+@frappe.whitelist()
+def pay_invoice(invoice_name, gateway, gateway_instance, payment_method_id=None, phone=None):
+
+    return _master_request(
+        "dt_master.api.billing.pay_invoice",
+        {
+            "invoice_name": invoice_name,
+            "gateway": gateway,
+            "gateway_instance": gateway_instance,
+            "payment_method_id": payment_method_id,
+            "phone": phone
+        }
+    )
+
+@frappe.whitelist()
+def create_payment_method(gateway, gateway_instance, reference, type, details):
+
+    return _master_request(
+        "dt_master.api.billing.create_payment_method",
+        {
+            "gateway": gateway,
+            "gateway_instance": gateway_instance,
+            "reference": reference,
+            "type": type,
+            "details": details
+        }
+    )
+
+@frappe.whitelist()
+def get_encryption_key(gateway, gateway_instance):
+
+    return _master_request(
+        "dt_master.api.billing.get_encryption_key",
+        {
+            "gateway": gateway,
+            "gateway_instance": gateway_instance
+        }
+    )
