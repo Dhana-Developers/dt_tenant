@@ -1,8 +1,16 @@
-// Copyright (c) 2025, Dhana Technologies and contributors
-// For license information, please see license.txt
+frappe.ui.form.on("Tenant Settings", {
+  refresh(frm) {
+    if (!frappe.user.has_role("System Manager")) return;
 
-// frappe.ui.form.on("Tenant Settings", {
-// 	refresh(frm) {
+    frm.add_custom_button("Re-sync Capabilities", () => {
+      frappe.call({
+        method: "dt_tenant.controllers.capability_sync.resync_capabilities",
+        freeze: true,
+        callback: () => {
+          frappe.msgprint("Capabilities re-synced successfully");
+        }
+      });
+    });
+  }
+});
 
-// 	},
-// });
