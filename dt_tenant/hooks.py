@@ -4,11 +4,17 @@ app_publisher = "Dhana Technologies"
 app_description = "Dhana technoligies tenant apps for renting customers"
 app_email = "enquiries@dhanatehcnologies.com"
 app_license = "agpl-3.0"
+app_logo_url = "/assets/dt_master/images/DHANA.svg"
+
+website_context = {
+	"favicon": "/assets/dt_master/images/favicon.ico",
+	"splash_image": "/assets/dt_master/images/DHANA.png"
+}
 
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ['frappe','erpnext']
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [

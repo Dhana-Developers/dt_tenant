@@ -1,1 +1,1 @@
-__version__ = "1.6.1" # fix: Correct tenant settings script location
+__version__ = "1.7.0" # feat: update ndf tech labs logos
